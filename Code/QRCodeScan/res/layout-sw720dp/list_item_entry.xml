@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent" >
+
+    <RelativeLayout
+        android:id="@+id/back"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/White"
+        android:tag="back" >
+
+        <RelativeLayout
+            android:id="@+id/list_item_entry_social"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical" >
+
+            <ImageButton
+                android:id="@+id/list_item_entry_btn_sms"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:layout_alignParentLeft="true"
+                android:background="@drawable/button_sms" />
+
+            <ImageButton
+                android:id="@+id/list_item_entry_btn_email"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:layout_toRightOf="@id/list_item_entry_btn_sms"
+                android:background="@drawable/button_email" />
+
+            <ImageButton
+                android:id="@+id/list_item_entry_btn_twitter"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:layout_toRightOf="@id/list_item_entry_btn_email"
+                android:background="@drawable/button_twiter"
+                android:visibility="gone" />
+
+            <ImageButton
+                android:id="@+id/list_item_entry_btn_facebook"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:layout_toRightOf="@id/list_item_entry_btn_twitter"
+                android:background="@drawable/button_facebook"
+                android:visibility="gone" />
+
+            <ImageButton
+                android:id="@+id/list_item_entry_btn_evernote"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:layout_toRightOf="@id/list_item_entry_btn_facebook"
+                android:background="@drawable/button_enote"
+                android:visibility="gone" />
+        </RelativeLayout>
+
+        <ImageButton
+            android:id="@+id/list_item_entry_btn_delete"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:background="@drawable/button_delete" />
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:id="@+id/front"
+        android:layout_width="fill_parent"
+        android:layout_height="60dp"
+        android:background="@drawable/listview_selector"
+        android:paddingLeft="10dp"
+        android:paddingRight="?android:attr/scrollbarSize"
+        android:tag="front" >
+
+        <ImageView
+            android:id="@+id/list_item_entry_icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_centerVertical="true"
+            android:src="@drawable/ic_qrcode" />
+
+        <ImageView
+            android:id="@+id/list_item_entry_arrow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:src="@drawable/ic_arrow" />
+
+        <TextView
+            android:id="@+id/list_item_entry_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_marginLeft="5dp"
+            android:layout_marginRight="5dp"
+            android:layout_toLeftOf="@id/list_item_entry_arrow"
+            android:layout_toRightOf="@id/list_item_entry_icon"
+            android:ellipsize="end"
+            android:gravity="left"
+            android:singleLine="true"
+            android:textSize="@dimen/campaign_textfontsize" />
+    </RelativeLayout>
+
+</RelativeLayout>

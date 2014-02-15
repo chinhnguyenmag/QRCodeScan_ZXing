@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="60dp"
+    android:background="@color/Orange"
+    android:padding="5dp" >
+
+    <TextView
+        android:id="@+id/header_tv_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_marginRight="20dp"
+        android:gravity="center"
+        android:textColor="@color/White"
+        android:textSize="@dimen/campaign_textfont_header" />
+
+    <LinearLayout
+        android:layout_width="50dp"
+        android:layout_height="match_parent"
+        android:layout_centerVertical="true"
+        android:clickable="true"
+        android:gravity="center_vertical"
+        android:onClick="onClick_Menu" >
+
+        <ImageButton
+            android:id="@+id/header_bt_menu"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/button_header_menu"
+            android:onClick="onClick_Menu" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/header_tv_right"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_alignParentRight="true"
+        android:layout_centerVertical="true"
+        android:layout_marginRight="5dp"
+        android:background="@drawable/button_forcus_browser"
+        android:clickable="true"
+        android:gravity="center_vertical"
+        android:onClick="onClick_DeleteAll"
+        android:text="@string/activity_history_header_deleteall"
+        android:textColor="@android:color/white"
+        android:textSize="@dimen/campaign_textfont_title"
+        android:visibility="gone" />
+
+    <ImageButton
+        android:id="@+id/header_ib_shortcus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_centerVertical="true"
+        android:layout_marginRight="5dp"
+        android:background="@drawable/button_forcus_browser"
+        android:onClick="onClick_Shortcus"
+        android:src="@drawable/ic_favourite_browser"
+        android:visibility="visible" />
+
+</RelativeLayout>

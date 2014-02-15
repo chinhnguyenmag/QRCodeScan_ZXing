@@ -1,0 +1,9 @@
+<resources>
+
+    <dimen name="slidingmenu_offset">200dp</dimen>
+    <dimen name="shadow_width">15dp</dimen>
+     <dimen name="campaign_textfontsize">18dp</dimen>
+       <dimen name="standard_padding">8dip</dimen>
+  <dimen name="half_padding">4dip</dimen>
+
+</resources>

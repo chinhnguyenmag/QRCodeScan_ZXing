@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/Orange"
+        android:orientation="vertical" >
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/Orange"
+            android:orientation="horizontal" >
+
+            <Button
+                android:id="@+id/post_to_wall_bt_cancel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dp"
+                android:background="@drawable/button_forcus_browser"
+                android:padding="10dp"
+                android:text="Cancel"
+                android:textColor="@android:color/white"
+                android:textSize="@dimen/campaign_textfont_header"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="Post To Wall"
+                android:textColor="@android:color/white"
+                android:textSize="@dimen/campaign_textfont_header"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/post_to_wall_bt_post"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="10dp"
+                android:background="@drawable/button_forcus_browser"
+                android:padding="30dp"
+                android:text="Post"
+                android:textColor="@android:color/white"
+                android:textSize="@dimen/campaign_textfont_header"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" >
+
+            <EditText
+                android:id="@+id/post_to_wall_et_content"
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent"
+                android:background="@color/White"
+                android:ems="10"
+                android:gravity="left"
+                 android:textSize="@dimen/campaign_textfontsize"
+                android:singleLine="false"
+                android:textColor="@color/Black" >
+            </EditText>
+        </LinearLayout>
+    </LinearLayout>
+
+</RelativeLayout>

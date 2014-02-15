@@ -1,0 +1,10 @@
+<resources>
+
+    <dimen name="slidingmenu_offset">680dp</dimen>
+    <dimen name="slidingmenu_offset_land">1100dp</dimen>
+    <dimen name="shadow_width">15dp</dimen>
+    <dimen name="campaign_textfontsize">26dp</dimen>
+    <dimen name="campaign_textfont_title">20dp</dimen>
+    <dimen name="campaign_textfont_header">30dp</dimen>
+
+</resources>
