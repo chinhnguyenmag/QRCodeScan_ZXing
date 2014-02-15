@@ -32,9 +32,9 @@ import android.widget.ToggleButton;
 
 import com.captix.scan.R;
 import com.captix.scan.customview.DialogChangeProfile;
+import com.captix.scan.customview.DialogChangeProfile.ProcessDialogProfile;
 import com.captix.scan.customview.DialogChangeShortcut;
 import com.captix.scan.customview.DialogChangeShortcut.ProcessDialogShortcus;
-import com.captix.scan.customview.DialogChangeProfile.ProcessDialogProfile;
 import com.captix.scan.customview.DialogConfirm;
 import com.captix.scan.customview.DialogConfirm.ProcessDialogConfirm;
 import com.captix.scan.customview.DialogPickTime;
@@ -49,6 +49,7 @@ import com.facebook.android.DialogError;
 import com.facebook.android.Facebook;
 import com.facebook.android.Facebook.DialogListener;
 import com.facebook.android.FacebookError;
+import com.google.zxing.client.android.CaptureActivity;
 
 /**
  * @author vule
@@ -195,7 +196,7 @@ public class SettingActivity extends BaseActivity implements
 	@Override
 	public void onScannerClickListener() {
 		try {
-			startActivity(new Intent(this, ScanActivity.class));
+			startActivity(new Intent(this, CaptureActivity.class));
 			finish();
 			overridePendingTransition(0, 0);
 
@@ -714,10 +715,9 @@ public class SettingActivity extends BaseActivity implements
 	}
 
 	public void onClick_Shortcus(View v) {
-		if (mAppPreferences.getShortcusUrl().equals("-1") || mAppPreferences.getShortcusUrl().equals("")) {
-			Toast.makeText(
-					this,
-					getString(R.string.mess_not_exist_shortcut),
+		if (mAppPreferences.getShortcusUrl().equals("-1")
+				|| mAppPreferences.getShortcusUrl().equals("")) {
+			Toast.makeText(this, getString(R.string.mess_not_exist_shortcut),
 					Toast.LENGTH_SHORT).show();
 		} else {
 			Intent dataIntent = new Intent(SettingActivity.this,

@@ -18,33 +18,40 @@ package com.google.zxing.client.android;
 
 import java.io.IOException;
 import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.media.AudioManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.preference.PreferenceManager;
 import android.text.ClipboardManager;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.TypedValue;
+import android.view.Display;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -56,13 +63,25 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.captix.scan.R;
+import com.captix.scan.activity.AboutActivity;
+import com.captix.scan.activity.BrowserActivity;
+import com.captix.scan.activity.HistoryActivity;
+import com.captix.scan.activity.SettingActivity;
+import com.captix.scan.control.DatabaseHandler;
+import com.captix.scan.customview.DialogConfirm;
+import com.captix.scan.customview.DialogConfirm.ProcessDialogConfirm;
+import com.captix.scan.customview.SlidingMenuCustom;
+import com.captix.scan.listener.MenuSlidingClickListener;
+import com.captix.scan.model.AppPreferences;
+import com.captix.scan.model.QRCode;
+import com.captix.scan.utils.Constants;
+import com.captix.scan.utils.StringExtraUtils;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.DecodeHintType;
 import com.google.zxing.Result;
 import com.google.zxing.ResultMetadataType;
 import com.google.zxing.ResultPoint;
 import com.google.zxing.client.android.camera.CameraManager;
-import com.google.zxing.client.android.history.HistoryActivity;
 import com.google.zxing.client.android.history.HistoryItem;
 import com.google.zxing.client.android.history.HistoryManager;
 import com.google.zxing.client.android.result.ResultButtonListener;
@@ -81,7 +100,7 @@ import com.google.zxing.client.android.share.ShareActivity;
  * @author Sean Owen
  */
 public final class CaptureActivity extends Activity implements
-		SurfaceHolder.Callback {
+		SurfaceHolder.Callback, MenuSlidingClickListener {
 
 	private static final String TAG = CaptureActivity.class.getSimpleName();
 
@@ -121,6 +140,20 @@ public final class CaptureActivity extends Activity implements
 	private BeepManager beepManager;
 	private AmbientLightManager ambientLightManager;
 
+	/* Bao add code here */
+	// For Sliding Menu
+	private SlidingMenuCustom mMenu;
+	// Save scanned QRCode into local database by SQLite
+	private DatabaseHandler mDataHandler;
+	private AlertDialog.Builder alertDialogBuilder;
+	private AlertDialog alertDialog;
+	private DialogConfirm dialogConfirm;
+	private AppPreferences mAppPreferences;
+	private long lastPressedTime;
+	private static final int PERIOD = 2000;
+	private AudioManager mAudio;
+	private int mDefaultVolume = 0;
+
 	ViewfinderView getViewfinderView() {
 		return viewfinderView;
 	}
@@ -140,7 +173,23 @@ public final class CaptureActivity extends Activity implements
 		Window window = getWindow();
 		window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 		setContentView(R.layout.capture);
-
+		mDataHandler = new DatabaseHandler(this);
+		mAudio = (AudioManager) getSystemService(this.AUDIO_SERVICE);
+		mAppPreferences = new AppPreferences(this);
+		if (mAppPreferences.getProfileUrl().equals("")) {
+			mAppPreferences.setProfileUrl("cptr.it/?var=XXXXX&id=test");
+		}
+		mMenu = new SlidingMenuCustom(this, this);
+		// Configure orientation for displaying Sliding Menu and Camera
+		DisplayMetrics displaymetrics = new DisplayMetrics();
+		getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
+		int width = displaymetrics.widthPixels;
+		int display_mode = getResources().getConfiguration().orientation;
+		if (display_mode == 1) {
+			mMenu.setBehindOff(width / 2 + width / 5);
+		} else {
+			mMenu.setBehindOff(width / 2 + width / 4);
+		}
 		hasSurface = false;
 		historyManager = new HistoryManager(this);
 		historyManager.trimHistory();
@@ -149,8 +198,9 @@ public final class CaptureActivity extends Activity implements
 		ambientLightManager = new AmbientLightManager(this);
 
 		PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
-
-//		showHelpOnFirstLaunch();
+		// Show warning dialog for Invalid URL
+		createInvalidURLDialog(CaptureActivity.this);
+		// showHelpOnFirstLaunch();
 	}
 
 	@Override
@@ -164,7 +214,7 @@ public final class CaptureActivity extends Activity implements
 		// first launch. That led to bugs where the scanning rectangle was the
 		// wrong size and partially
 		// off screen.
-		cameraManager = new CameraManager(getApplication());
+		cameraManager = new CameraManager(this);
 
 		viewfinderView = (ViewfinderView) findViewById(R.id.viewfinder_view);
 		viewfinderView.setCameraManager(cameraManager);
@@ -304,37 +354,10 @@ public final class CaptureActivity extends Activity implements
 	@Override
 	protected void onDestroy() {
 		inactivityTimer.shutdown();
-		super.onDestroy();
-	}
-
-	@Override
-	public boolean onKeyDown(int keyCode, KeyEvent event) {
-		switch (keyCode) {
-		case KeyEvent.KEYCODE_BACK:
-			if (source == IntentSource.NATIVE_APP_INTENT) {
-				setResult(RESULT_CANCELED);
-				finish();
-				return true;
-			}
-			if ((source == IntentSource.NONE || source == IntentSource.ZXING_LINK)
-					&& lastResult != null) {
-				restartPreviewAfterDelay(0L);
-				return true;
-			}
-			break;
-		case KeyEvent.KEYCODE_FOCUS:
-		case KeyEvent.KEYCODE_CAMERA:
-			// Handle these events so they don't launch the Camera app
-			return true;
-			// Use volume up/down to turn on light
-		case KeyEvent.KEYCODE_VOLUME_DOWN:
-			cameraManager.setTorch(false);
-			return true;
-		case KeyEvent.KEYCODE_VOLUME_UP:
-			cameraManager.setTorch(true);
-			return true;
+		if (mAppPreferences != null) {
+			mAppPreferences = null;
 		}
-		return super.onKeyDown(keyCode, event);
+		super.onDestroy();
 	}
 
 	@Override
@@ -423,6 +446,36 @@ public final class CaptureActivity extends Activity implements
 	@Override
 	public void surfaceChanged(SurfaceHolder holder, int format, int width,
 			int height) {
+//		if (this.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+//			cameraManager.setDisplayOrientation(90);
+//		}
+//		if (this.getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
+//			// Change orientation when rotating camera
+//			int angle;// This is camera orientation
+//			Display display = this.getWindowManager().getDefaultDisplay();
+//			switch (display.getRotation()) {// This is display orientation
+//			case Surface.ROTATION_0:
+//				// for Tablet
+//				angle = 0;
+//				break;
+//			case Surface.ROTATION_90:
+//				// for Phone
+//				angle = 0;
+//				break;
+//			case Surface.ROTATION_180:
+//				// for Tablet
+//				angle = 180;
+//				break;
+//			case Surface.ROTATION_270:
+//				// for Phone
+//				angle = 180;
+//				break;
+//			default:
+//				angle = 90;
+//				break;
+//			}
+//			cameraManager.setDisplayOrientation(angle);
+//		}
 
 	}
 
@@ -449,7 +502,7 @@ public final class CaptureActivity extends Activity implements
 			// Then not from history, so beep/vibrate and we have an image to
 			// draw on
 			beepManager.playBeepSoundAndVibrate();
-			drawResultPoints(barcode, scaleFactor, rawResult);
+			// drawResultPoints(barcode, scaleFactor, rawResult);
 		}
 
 		switch (source) {
@@ -631,9 +684,9 @@ public final class CaptureActivity extends Activity implements
 	private void handleDecodeExternally(Result rawResult,
 			ResultHandler resultHandler, Bitmap barcode) {
 
-		if (barcode != null) {
-			viewfinderView.drawResultBitmap(barcode);
-		}
+		// if (barcode != null) {
+		// viewfinderView.drawResultBitmap(barcode);
+		// }
 
 		long resultDurationMS;
 		if (getIntent() == null) {
@@ -672,115 +725,99 @@ public final class CaptureActivity extends Activity implements
 			// the deprecated intent is retired.
 			Intent intent = new Intent(getIntent().getAction());
 			intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET);
-			/*Bao add code here*/
+			/* Bao add code here */
 			// RESULT GOT FROM SCANNING
 			intent.putExtra(Intents.Scan.RESULT, rawResult.toString());
-			intent.putExtra(Intents.Scan.RESULT_FORMAT, rawResult
-					.getBarcodeFormat().toString());
-			byte[] rawBytes = rawResult.getRawBytes();
-			if (rawBytes != null && rawBytes.length > 0) {
-				intent.putExtra(Intents.Scan.RESULT_BYTES, rawBytes);
-			}
-			Map<ResultMetadataType, ?> metadata = rawResult.getResultMetadata();
-			if (metadata != null) {
-				if (metadata.containsKey(ResultMetadataType.UPC_EAN_EXTENSION)) {
-					intent.putExtra(Intents.Scan.RESULT_UPC_EAN_EXTENSION,
-							metadata.get(ResultMetadataType.UPC_EAN_EXTENSION)
-									.toString());
-				}
-				Integer orientation = (Integer) metadata
-						.get(ResultMetadataType.ORIENTATION);
-				if (orientation != null) {
-					intent.putExtra(Intents.Scan.RESULT_ORIENTATION,
-							orientation.intValue());
-				}
-				String ecLevel = (String) metadata
-						.get(ResultMetadataType.ERROR_CORRECTION_LEVEL);
-				if (ecLevel != null) {
-					intent.putExtra(Intents.Scan.RESULT_ERROR_CORRECTION_LEVEL,
-							ecLevel);
-				}
-				Iterable<byte[]> byteSegments = (Iterable<byte[]>) metadata
-						.get(ResultMetadataType.BYTE_SEGMENTS);
-				if (byteSegments != null) {
-					int i = 0;
-					for (byte[] byteSegment : byteSegments) {
-						intent.putExtra(
-								Intents.Scan.RESULT_BYTE_SEGMENTS_PREFIX + i,
-								byteSegment);
-						i++;
-					}
-				}
-			}
-			
-//			sendReplyMessage(R.id.return_scan_result, intent, resultDurationMS);
 
-//		} else if (source == IntentSource.PRODUCT_SEARCH_LINK) {
-//
-//			// Reformulate the URL which triggered us into a query, so that the
-//			// request goes to the same
-//			// TLD as the scan URL.
-//			int end = sourceUrl.lastIndexOf("/scan");
-//			String replyURL = sourceUrl.substring(0, end) + "?q="
-//					+ resultHandler.getDisplayContents() + "&source=zxing";
-//			sendReplyMessage(R.id.launch_product_query, replyURL,
-//					resultDurationMS);
-//
-//		} else if (source == IntentSource.ZXING_LINK) {
-//
-//			if (scanFromWebPageManager != null
-//					&& scanFromWebPageManager.isScanFromWebPage()) {
-//				String replyURL = scanFromWebPageManager.buildReplyURL(
-//						rawResult, resultHandler);
-//				sendReplyMessage(R.id.launch_product_query, replyURL,
-//						resultDurationMS);
-//			}
-//
-		}
-	}
-
-	private void sendReplyMessage(int id, Object arg, long delayMS) {
-		Message message = Message.obtain(handler, id, arg);
-		if (delayMS > 0L) {
-			handler.sendMessageDelayed(message, delayMS);
-		} else {
-			handler.sendMessage(message);
-		}
-	}
-
-	/**
-	 * We want the help screen to be shown automatically the first time a new
-	 * version of the app is run. The easiest way to do this is to check
-	 * android:versionCode from the manifest, and compare it to a value stored
-	 * as a preference.
-	 */
-	private boolean showHelpOnFirstLaunch() {
-		try {
-			PackageInfo info = getPackageManager().getPackageInfo(PACKAGE_NAME,
-					0);
-			int currentVersion = info.versionCode;
-			SharedPreferences prefs = PreferenceManager
-					.getDefaultSharedPreferences(this);
-			int lastVersion = prefs.getInt(
-					PreferencesActivity.KEY_HELP_VERSION_SHOWN, 0);
-			if (currentVersion > lastVersion) {
-				prefs.edit()
-						.putInt(PreferencesActivity.KEY_HELP_VERSION_SHOWN,
-								currentVersion).commit();
-				Intent intent = new Intent(this, HelpActivity.class);
-				intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET);
-				// Show the default page on a clean install, and the what's new
-				// page on an upgrade.
-				String page = lastVersion == 0 ? HelpActivity.DEFAULT_PAGE
-						: HelpActivity.WHATS_NEW_PAGE;
-				intent.putExtra(HelpActivity.REQUESTED_PAGE_KEY, page);
-				startActivity(intent);
-				return true;
+			// Stop Preview
+			cameraManager.stopPreview();
+			// Check whether to play sound or not
+			if (mAppPreferences.isSound()
+					&& mAudio.getStreamVolume(AudioManager.STREAM_RING) != 0) {
+				beepManager.playBeepSoundAndVibrate();
 			}
-		} catch (PackageManager.NameNotFoundException e) {
-			Log.w(TAG, e);
+			// Create dialog confirm to avoid opening twice
+			createDialogConfirmBrowsing(rawResult.toString());
+			if (mAppPreferences.getProfileUrl().equalsIgnoreCase("-1")) {
+				// There is no URL profile format
+				continueScan(rawResult.toString());
+			} else {
+				if (checkInvalidURL(rawResult.toString())) {
+					// Continue scan following fixed URL format
+					continueScan(rawResult.toString());
+				} else if (!alertDialog.isShowing()) {
+					alertDialog.show();
+				}
+
+			}
+			// Start Preview
+			cameraManager.startPreview();
+
+			// intent.putExtra(Intents.Scan.RESULT_FORMAT, rawResult
+			// .getBarcodeFormat().toString());
+			// byte[] rawBytes = rawResult.getRawBytes();
+			// if (rawBytes != null && rawBytes.length > 0) {
+			// intent.putExtra(Intents.Scan.RESULT_BYTES, rawBytes);
+			// }
+			// Map<ResultMetadataType, ?> metadata =
+			// rawResult.getResultMetadata();
+			// if (metadata != null) {
+			// if (metadata.containsKey(ResultMetadataType.UPC_EAN_EXTENSION)) {
+			// intent.putExtra(Intents.Scan.RESULT_UPC_EAN_EXTENSION,
+			// metadata.get(ResultMetadataType.UPC_EAN_EXTENSION)
+			// .toString());
+			// }
+			// Integer orientation = (Integer) metadata
+			// .get(ResultMetadataType.ORIENTATION);
+			// if (orientation != null) {
+			// intent.putExtra(Intents.Scan.RESULT_ORIENTATION,
+			// orientation.intValue());
+			// }
+			// String ecLevel = (String) metadata
+			// .get(ResultMetadataType.ERROR_CORRECTION_LEVEL);
+			// if (ecLevel != null) {
+			// intent.putExtra(Intents.Scan.RESULT_ERROR_CORRECTION_LEVEL,
+			// ecLevel);
+			// }
+			// Iterable<byte[]> byteSegments = (Iterable<byte[]>) metadata
+			// .get(ResultMetadataType.BYTE_SEGMENTS);
+			// if (byteSegments != null) {
+			// int i = 0;
+			// for (byte[] byteSegment : byteSegments) {
+			// intent.putExtra(
+			// Intents.Scan.RESULT_BYTE_SEGMENTS_PREFIX + i,
+			// byteSegment);
+			// i++;
+			// }
+			// }
+			// }
+
+			// sendReplyMessage(R.id.return_scan_result, intent,
+			// resultDurationMS);
+
+			// } else if (source == IntentSource.PRODUCT_SEARCH_LINK) {
+			//
+			// // Reformulate the URL which triggered us into a query, so that
+			// the
+			// // request goes to the same
+			// // TLD as the scan URL.
+			// int end = sourceUrl.lastIndexOf("/scan");
+			// String replyURL = sourceUrl.substring(0, end) + "?q="
+			// + resultHandler.getDisplayContents() + "&source=zxing";
+			// sendReplyMessage(R.id.launch_product_query, replyURL,
+			// resultDurationMS);
+			//
+			// } else if (source == IntentSource.ZXING_LINK) {
+			//
+			// if (scanFromWebPageManager != null
+			// && scanFromWebPageManager.isScanFromWebPage()) {
+			// String replyURL = scanFromWebPageManager.buildReplyURL(
+			// rawResult, resultHandler);
+			// sendReplyMessage(R.id.launch_product_query, replyURL,
+			// resultDurationMS);
+			// }
+			//
 		}
-		return false;
 	}
 
 	private void initCamera(SurfaceHolder surfaceHolder) {
@@ -836,5 +873,281 @@ public final class CaptureActivity extends Activity implements
 
 	public void drawViewfinder() {
 		viewfinderView.drawViewfinder();
+	}
+
+	/* INVALID URL DIALOG */
+
+	public void createInvalidURLDialog(Context context) {
+		try {
+			alertDialogBuilder = new AlertDialog.Builder(context);
+
+			// set title
+			alertDialogBuilder.setTitle(context.getResources().getString(
+					R.string.activity_scan_invalid_url_title));
+
+			// set dialog message
+			alertDialogBuilder
+					.setMessage(
+							context.getResources().getString(
+									R.string.activity_scan_invalid_url_message))
+					.setCancelable(false)
+					.setPositiveButton("Ok",
+							new DialogInterface.OnClickListener() {
+								public void onClick(DialogInterface dialog,
+										int id) {
+									dialog.cancel();
+									cameraManager.startPreview();
+									restartPreviewAfterDelay(BULK_MODE_SCAN_DELAY_MS);
+								}
+							}); // create alert dialog
+			alertDialog = alertDialogBuilder.create();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	/* ASK BEFORE OPENING BROWSER DIALOG */
+	public void createDialogConfirmBrowsing(final String scanResult) {
+		dialogConfirm = new DialogConfirm(CaptureActivity.this,
+				android.R.drawable.ic_dialog_alert,
+				CaptureActivity.this
+						.getString(R.string.activity_scan_open_browser_title),
+				CaptureActivity.this
+						.getString(R.string.activity_scan_open_url_confirm),
+				true, new ProcessDialogConfirm() {
+
+					@Override
+					public void click_Ok() {
+
+						Intent dataIntent = new Intent(CaptureActivity.this,
+								BrowserActivity.class);
+						dataIntent.putExtra(StringExtraUtils.KEY_SCAN_RESULT,
+								scanResult);
+						startActivity(dataIntent);
+
+					}
+
+					@Override
+					public void click_Cancel() {
+						// Start scanning again
+						cameraManager.startPreview();
+						restartPreviewAfterDelay(BULK_MODE_SCAN_DELAY_MS);
+					}
+				});
+	}
+
+	public boolean checkInvalidURL(String result) {
+		try {
+
+			String resultOld = result.toUpperCase();
+			String result1 = resultOld.toUpperCase();
+			String result2 = "";
+			String urlProfile1 = mAppPreferences.getProfileUrl().toUpperCase();
+			String urlProfile2 = "";
+
+			result1 = result1.replace("HTTPS://", "");
+			result1 = result1.replace("HTTP://", "");
+			result1 = result1.replace("WWW.", "");
+			result1 = result1.replace("FTP://", "");
+
+			if (result1.indexOf("/") != -1) {
+				String[] domain = result1.split("/");
+				result1 = domain[0];
+				if (domain.length > 1) {
+					result2 = domain[1];
+				}
+			}
+
+			urlProfile1 = urlProfile1.replace("HTTPS://", "");
+			urlProfile1 = urlProfile1.replace("HTTP://", "");
+			urlProfile1 = urlProfile1.replace("WWW.", "");
+			urlProfile1 = urlProfile1.replace("FTP://", "");
+
+			if (urlProfile1.indexOf("/") != -1) {
+				String[] domain = urlProfile1.split("/");
+				urlProfile1 = domain[0];
+				if (domain.length > 1) {
+					urlProfile2 = domain[1];
+				}
+			}
+
+			if (urlProfile2.length() > 0) {
+				if (urlProfile2.startsWith(Constants.VALIDATE_URL_PROFILE
+						.toUpperCase())) {
+					return result1.toUpperCase().equalsIgnoreCase(
+							urlProfile1.toUpperCase());
+				}
+
+				if (result2.length() > 0) {
+					if (resultOld.contains(Constants.VALIDATE_URL_PROFILE
+							.toUpperCase())) {
+						String contain1 = resultOld.toUpperCase().substring(
+								0,
+								resultOld
+										.indexOf(Constants.VALIDATE_URL_PROFILE
+												.toUpperCase()));
+
+						String contain2 = resultOld
+								.toUpperCase()
+								.substring(
+										resultOld
+												.indexOf(Constants.VALIDATE_URL_PROFILE
+														.toUpperCase())
+												+ Constants.VALIDATE_URL_PROFILE
+														.length(),
+										resultOld.length());
+
+						if (contain2.length() == 0) {
+							if (mAppPreferences.getProfileUrl().toUpperCase()
+									.contains(contain1.toUpperCase())) {
+								return true;
+							}
+						} else if (mAppPreferences.getProfileUrl()
+								.toUpperCase().contains(contain1.toUpperCase())
+								&& mAppPreferences.getProfileUrl()
+										.toUpperCase()
+										.contains(contain2.toUpperCase())) {
+							return true;
+						}
+					} else {
+						return result1.toUpperCase().equalsIgnoreCase(
+								urlProfile1.toUpperCase());
+					}
+				} else {
+					return result1.toUpperCase().equalsIgnoreCase(
+							urlProfile1.toUpperCase());
+				}
+			} else
+				return result1.toUpperCase().equalsIgnoreCase(
+						urlProfile1.toUpperCase());
+			return false;
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	public void continueScan(final String scanResult) {
+		SimpleDateFormat formatter = new SimpleDateFormat(
+				"yyyy-MM-dd HH:mm:ss", Locale.US);
+
+		String date = formatter.format(new Date());
+		mDataHandler.addQRCode(new QRCode(date, scanResult));
+
+		// Get the QR Code after scanning and put it to
+		// Browser
+		// for
+		// searching on WebSite
+
+		if (!mAppPreferences.getAskBeforeOpening()) {
+			Intent dataIntent = new Intent(CaptureActivity.this,
+					BrowserActivity.class);
+			dataIntent.putExtra(StringExtraUtils.KEY_SCAN_RESULT, scanResult);
+			startActivity(dataIntent);
+		} else {
+			if (!dialogConfirm.isShowing()) {
+				dialogConfirm.show();
+			}
+		}
+	}
+
+	public void onClick_Menu(View view) {
+		try {
+			if (mMenu == null) {
+				mMenu = new SlidingMenuCustom(this, this);
+			}
+			mMenu.toggle();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	@Override
+	public void onScannerClickListener() {
+		try {
+			mMenu.toggle();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	@Override
+	public void onHistoryClickListener() {
+		try {
+			startActivity(new Intent(CaptureActivity.this,
+					HistoryActivity.class));
+			finish();
+			overridePendingTransition(0, 0);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	@Override
+	public void onAboutClickListener() {
+		try {
+			startActivity(new Intent(this, AboutActivity.class));
+			finish();
+			overridePendingTransition(0, 0);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	@Override
+	public void onSettingClickListener() {
+		try {
+			startActivity(new Intent(CaptureActivity.this,
+					SettingActivity.class));
+			finish();
+			overridePendingTransition(0, 0);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	@Override
+	public boolean onKeyDown(int keyCode, KeyEvent event) {
+		if (event.getKeyCode() == KeyEvent.KEYCODE_BACK) {
+			switch (event.getAction()) {
+			case KeyEvent.ACTION_DOWN:
+				if (event.getDownTime() - lastPressedTime < PERIOD) {
+					finish();
+				} else {
+					Toast.makeText(getApplicationContext(),
+							getString(R.string.press_exit), Toast.LENGTH_SHORT)
+							.show();
+					lastPressedTime = event.getEventTime();
+				}
+				return true;
+			}
+		}
+		return false;
+	}
+
+	@Override
+	public void onConfigurationChanged(Configuration newConfig) {
+		super.onConfigurationChanged(newConfig);
+		DisplayMetrics displaymetrics = new DisplayMetrics();
+		getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
+		int width = displaymetrics.widthPixels;
+		// Checks the orientation of the screen
+		if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+			mMenu.setBehindOff(width / 2 + width / 4);
+		} else if (newConfig.orientation == Configuration.ORIENTATION_PORTRAIT) {
+			mMenu.setBehindOff(width / 2 + width / 5);
+		}
+	}
+
+	public void onClick_Shortcus(View v) {
+		if (mAppPreferences.getShortcusUrl().equals("-1")) {
+			Toast.makeText(this, getString(R.string.mess_not_exist_shortcut),
+					Toast.LENGTH_SHORT).show();
+		} else {
+			Intent dataIntent = new Intent(CaptureActivity.this,
+					BrowserActivity.class);
+			dataIntent.putExtra(StringExtraUtils.KEY_SCAN_RESULT,
+					mAppPreferences.getShortcusUrl().trim());
+			startActivity(dataIntent);
+		}
 	}
 }

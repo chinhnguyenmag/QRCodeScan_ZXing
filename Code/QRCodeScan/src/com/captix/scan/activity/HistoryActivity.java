@@ -55,6 +55,7 @@ import com.facebook.android.Facebook.DialogListener;
 import com.facebook.android.FacebookError;
 import com.fortysevendeg.swipelistview.BaseSwipeListViewListener;
 import com.fortysevendeg.swipelistview.SwipeListView;
+import com.google.zxing.client.android.CaptureActivity;
 
 public class HistoryActivity extends ParentActivity implements
 		MenuSlidingClickListener, GetWidthListener {
@@ -394,7 +395,7 @@ public class HistoryActivity extends ParentActivity implements
 
 	@Override
 	public void onScannerClickListener() {
-		startActivity(new Intent(this, ScanActivity.class));
+		startActivity(new Intent(this, CaptureActivity.class));
 		finish();
 		overridePendingTransition(0, 0);
 	}
@@ -679,7 +680,7 @@ public class HistoryActivity extends ParentActivity implements
 			mMenu.setBehindOff(width / 2 + width / 5);
 		}
 	}
-	
+
 	public void onClick_Shortcus(View v) {
 		Toast.makeText(this, "Shortcus !", Toast.LENGTH_SHORT).show();
 	}

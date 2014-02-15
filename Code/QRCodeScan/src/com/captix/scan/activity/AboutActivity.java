@@ -19,6 +19,7 @@ import com.captix.scan.listener.MenuSlidingClickListener;
 import com.captix.scan.model.AppPreferences;
 import com.captix.scan.utils.StringExtraUtils;
 import com.captix.scan.utils.Utils;
+import com.google.zxing.client.android.CaptureActivity;
 
 /**
  * @author vu le
@@ -80,7 +81,7 @@ public class AboutActivity extends BaseActivity implements
 	@Override
 	public void onScannerClickListener() {
 		try {
-			startActivity(new Intent(this, ScanActivity.class));
+			startActivity(new Intent(this, CaptureActivity.class));
 			finish();
 			overridePendingTransition(0, 0);
 		} catch (Exception e) {
@@ -198,15 +199,12 @@ public class AboutActivity extends BaseActivity implements
 
 	public void onClick_Shortcus(View v) {
 		if (mAppPreferences.getShortcusUrl().equals("-1")) {
-			Toast.makeText(
-					this,
-					getString(R.string.mess_not_exist_shortcut),
+			Toast.makeText(this, getString(R.string.mess_not_exist_shortcut),
 					Toast.LENGTH_SHORT).show();
 		} else {
-			Intent dataIntent = new Intent(
-					AboutActivity.this, BrowserActivity.class);
-			dataIntent.putExtra(
-					StringExtraUtils.KEY_SCAN_RESULT,
+			Intent dataIntent = new Intent(AboutActivity.this,
+					BrowserActivity.class);
+			dataIntent.putExtra(StringExtraUtils.KEY_SCAN_RESULT,
 					mAppPreferences.getShortcusUrl().trim());
 			startActivity(dataIntent);
 		}

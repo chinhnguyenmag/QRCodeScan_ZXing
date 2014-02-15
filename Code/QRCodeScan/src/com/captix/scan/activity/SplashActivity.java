@@ -7,6 +7,7 @@ import android.os.Handler;
 import android.os.Message;
 
 import com.captix.scan.R;
+import com.google.zxing.client.android.CaptureActivity;
 
 public class SplashActivity extends Activity {
 	private final int STOPSPLASH = 0;
@@ -35,7 +36,7 @@ public class SplashActivity extends Activity {
 			try {
 
 				startActivity(new Intent(SplashActivity.this,
-						ScanActivity.class));
+						CaptureActivity.class));
 				finish();
 
 			} catch (Exception e) {
