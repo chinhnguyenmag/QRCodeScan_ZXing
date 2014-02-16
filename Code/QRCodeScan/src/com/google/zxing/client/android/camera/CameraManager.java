@@ -121,38 +121,42 @@ public final class CameraManager {
 				parameters = theCamera.getParameters();
 				parameters.unflatten(parametersFlattened);
 				try {
-					if (mActivity.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
-						theCamera.setDisplayOrientation(90);
-					}
-					if (mActivity.getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
-						// Change orientation when rotating camera
-						int angle;// This is camera orientation
-						Display display = mActivity.getWindowManager()
-								.getDefaultDisplay();
-						switch (display.getRotation()) {// This is display
-														// orientation
-						case Surface.ROTATION_0:
-							// for Tablet
-							angle = 0;
-							break;
-						case Surface.ROTATION_90:
-							// for Phone
-							angle = 0;
-							break;
-						case Surface.ROTATION_180:
-							// for Tablet
-							angle = 180;
-							break;
-						case Surface.ROTATION_270:
-							// for Phone
-							angle = 180;
-							break;
-						default:
-							angle = 90;
-							break;
-						}
-						theCamera.setDisplayOrientation(angle);
-					}
+					// if
+					// (mActivity.getResources().getConfiguration().orientation
+					// == Configuration.ORIENTATION_PORTRAIT) {
+					// theCamera.setDisplayOrientation(90);
+					// }
+					// if
+					// (mActivity.getResources().getConfiguration().orientation
+					// == Configuration.ORIENTATION_LANDSCAPE) {
+					// // Change orientation when rotating camera
+					// int angle;// This is camera orientation
+					// Display display = mActivity.getWindowManager()
+					// .getDefaultDisplay();
+					// switch (display.getRotation()) {// This is display
+					// // orientation
+					// case Surface.ROTATION_0:
+					// // for Tablet
+					// angle = 0;
+					// break;
+					// case Surface.ROTATION_90:
+					// // for Phone
+					// angle = 0;
+					// break;
+					// case Surface.ROTATION_180:
+					// // for Tablet
+					// angle = 180;
+					// break;
+					// case Surface.ROTATION_270:
+					// // for Phone
+					// angle = 180;
+					// break;
+					// default:
+					// angle = 90;
+					// break;
+					// }
+					// theCamera.setDisplayOrientation(angle);
+					// }
 					theCamera.setParameters(parameters);
 					configManager.setDesiredCameraParameters(theCamera, true);
 				} catch (RuntimeException re2) {
@@ -309,10 +313,26 @@ public final class CameraManager {
 				// Called early, before init even finished
 				return null;
 			}
-			rect.left = rect.left * cameraResolution.x / screenResolution.x;
-			rect.right = rect.right * cameraResolution.x / screenResolution.x;
-			rect.top = rect.top * cameraResolution.y / screenResolution.y;
-			rect.bottom = rect.bottom * cameraResolution.y / screenResolution.y;
+			/* Bao add code here */
+			if (context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+				// for PORTRAIT
+				// rect.left = rect.left * cameraResolution.y /
+				// screenResolution.x;
+				// rect.right = rect.right * cameraResolution.y /
+				// screenResolution.x;
+				// rect.top = rect.top * cameraResolution.x /
+				// screenResolution.y;
+				// rect.bottom = rect.bottom * cameraResolution.x /
+				// screenResolution.y;
+			} else {
+				// for LANDSCAPE
+				rect.left = rect.left * cameraResolution.x / screenResolution.x;
+				rect.right = rect.right * cameraResolution.x
+						/ screenResolution.x;
+				rect.top = rect.top * cameraResolution.y / screenResolution.y;
+				rect.bottom = rect.bottom * cameraResolution.y
+						/ screenResolution.y;
+			}
 			framingRectInPreview = rect;
 		}
 		return framingRectInPreview;
