@@ -16,6 +16,8 @@
 
 package com.google.zxing.client.android.camera;
 
+import java.io.IOException;
+
 import android.app.Activity;
 import android.content.Context;
 import android.content.res.Configuration;
@@ -24,13 +26,10 @@ import android.graphics.Rect;
 import android.hardware.Camera;
 import android.os.Handler;
 import android.util.Log;
-import android.view.Display;
-import android.view.Surface;
 import android.view.SurfaceHolder;
+
 import com.google.zxing.PlanarYUVLuminanceSource;
 import com.google.zxing.client.android.camera.open.OpenCameraManager;
-
-import java.io.IOException;
 
 /**
  * This object wraps the Camera service object and expects to be the only one
@@ -47,6 +46,13 @@ public final class CameraManager {
 	private static final int MIN_FRAME_HEIGHT = 240;
 	private static final int MAX_FRAME_WIDTH = 960; // = 1920/2
 	private static final int MAX_FRAME_HEIGHT = 540; // = 1080/2
+	// private static final int MAX_FRAME_WIDTH = 400; // = 5/8 * 1920
+	// private static final int MAX_FRAME_HEIGHT = 600; // = 5/8 * 1080
+
+	/* Bao add code here */
+	// check whether there is change in orientation or not
+	private boolean mIsChangeOrientation = false;
+	private int mOldOrientation;
 
 	private final Context context;
 	private final CameraConfigurationManager configManager;
@@ -71,6 +77,8 @@ public final class CameraManager {
 		this.mActivity = (Activity) context;
 		this.configManager = new CameraConfigurationManager(context);
 		previewCallback = new PreviewCallback(configManager);
+
+		mOldOrientation = context.getResources().getConfiguration().orientation;
 	}
 
 	/**
@@ -121,42 +129,6 @@ public final class CameraManager {
 				parameters = theCamera.getParameters();
 				parameters.unflatten(parametersFlattened);
 				try {
-					// if
-					// (mActivity.getResources().getConfiguration().orientation
-					// == Configuration.ORIENTATION_PORTRAIT) {
-					// theCamera.setDisplayOrientation(90);
-					// }
-					// if
-					// (mActivity.getResources().getConfiguration().orientation
-					// == Configuration.ORIENTATION_LANDSCAPE) {
-					// // Change orientation when rotating camera
-					// int angle;// This is camera orientation
-					// Display display = mActivity.getWindowManager()
-					// .getDefaultDisplay();
-					// switch (display.getRotation()) {// This is display
-					// // orientation
-					// case Surface.ROTATION_0:
-					// // for Tablet
-					// angle = 0;
-					// break;
-					// case Surface.ROTATION_90:
-					// // for Phone
-					// angle = 0;
-					// break;
-					// case Surface.ROTATION_180:
-					// // for Tablet
-					// angle = 180;
-					// break;
-					// case Surface.ROTATION_270:
-					// // for Phone
-					// angle = 180;
-					// break;
-					// default:
-					// angle = 90;
-					// break;
-					// }
-					// theCamera.setDisplayOrientation(angle);
-					// }
 					theCamera.setParameters(parameters);
 					configManager.setDesiredCameraParameters(theCamera, true);
 				} catch (RuntimeException re2) {
@@ -301,7 +273,14 @@ public final class CameraManager {
 	 * frame, not UI / screen.
 	 */
 	public synchronized Rect getFramingRectInPreview() {
+		/* Bao add code here */
+		if (mOldOrientation != context.getResources().getConfiguration().orientation) {
+			mIsChangeOrientation = true;
+		} else {
+			mIsChangeOrientation = false;
+		}
 		if (framingRectInPreview == null) {
+			mOldOrientation = context.getResources().getConfiguration().orientation;
 			Rect framingRect = getFramingRect();
 			if (framingRect == null) {
 				return null;
@@ -316,14 +295,46 @@ public final class CameraManager {
 			/* Bao add code here */
 			if (context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
 				// for PORTRAIT
-				// rect.left = rect.left * cameraResolution.y /
-				// screenResolution.x;
-				// rect.right = rect.right * cameraResolution.y /
-				// screenResolution.x;
-				// rect.top = rect.top * cameraResolution.x /
-				// screenResolution.y;
-				// rect.bottom = rect.bottom * cameraResolution.x /
-				// screenResolution.y;
+				rect.left = rect.left * cameraResolution.y / screenResolution.x;
+				rect.right = rect.right * cameraResolution.y
+						/ screenResolution.x;
+				rect.top = rect.top * cameraResolution.x / screenResolution.y;
+				rect.bottom = rect.bottom * cameraResolution.x
+						/ screenResolution.y;
+			} else {
+				// for LANDSCAPE
+				rect.left = rect.left * cameraResolution.x / screenResolution.x;
+				rect.right = rect.right * cameraResolution.x
+						/ screenResolution.x;
+				rect.top = rect.top * cameraResolution.y / screenResolution.y;
+				rect.bottom = rect.bottom * cameraResolution.y
+						/ screenResolution.y;
+			}
+			framingRectInPreview = rect;
+		}
+		if (mIsChangeOrientation) {
+			mOldOrientation = context.getResources().getConfiguration().orientation;
+
+			Rect framingRect = getFramingRect();
+			if (framingRect == null) {
+				return null;
+			}
+			Rect rect = new Rect(framingRect);
+			Point cameraResolution = configManager.getCameraResolution();
+			Point screenResolution = configManager.getScreenResolution();
+			if (cameraResolution == null || screenResolution == null) {
+				// Called early, before init even finished
+				return null;
+			}
+			/* Bao add code here */
+			if (context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+				// for PORTRAIT
+				rect.left = rect.left * cameraResolution.y / screenResolution.x;
+				rect.right = rect.right * cameraResolution.y
+						/ screenResolution.x;
+				rect.top = rect.top * cameraResolution.x / screenResolution.y;
+				rect.bottom = rect.bottom * cameraResolution.x
+						/ screenResolution.y;
 			} else {
 				// for LANDSCAPE
 				rect.left = rect.left * cameraResolution.x / screenResolution.x;
@@ -386,9 +397,15 @@ public final class CameraManager {
 		if (rect == null) {
 			return null;
 		}
+		/*Bao add code here*/
 		// Go ahead and assume it's YUV rather than die.
-		return new PlanarYUVLuminanceSource(data, width, height, rect.left,
-				rect.top, rect.width(), rect.height(), false);
+		if (!mIsChangeOrientation) {
+			return new PlanarYUVLuminanceSource(data, width, height, rect.left,
+					rect.top, rect.width(), rect.height(), false);
+		} else {
+			return new PlanarYUVLuminanceSource(data, width, height, rect.left,
+					rect.top, rect.width(), rect.height(), true);
+		}
 	}
 
 	public void setDisplayOrientation(int angle) {

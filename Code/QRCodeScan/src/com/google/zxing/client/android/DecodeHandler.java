@@ -82,6 +82,7 @@ final class DecodeHandler extends Handler {
 		long start = System.currentTimeMillis();
 		Result rawResult = null;
 		/* Bao add code here for PORTRAIT */
+		PlanarYUVLuminanceSource source;
 		if (activity.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
 			byte[] rotatedData = new byte[data.length];
 			for (int y = 0; y < height; y++) {
@@ -92,10 +93,14 @@ final class DecodeHandler extends Handler {
 			int tmp = width;
 			width = height;
 			height = tmp;
-		}
 
-		PlanarYUVLuminanceSource source = activity.getCameraManager()
-				.buildLuminanceSource(data, width, height);
+			source = activity.getCameraManager().buildLuminanceSource(
+					rotatedData, width, height);
+		} else {
+
+			source = activity.getCameraManager().buildLuminanceSource(data,
+					width, height);
+		}
 		if (source != null) {
 			BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
 			try {

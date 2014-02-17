@@ -125,7 +125,6 @@ public final class CaptureActivity extends Activity implements
 	private CaptureActivityHandler handler;
 	private Result savedResultToShow;
 	private ViewfinderView viewfinderView;
-	private View resultView;
 	private Result lastResult;
 	private boolean hasSurface;
 	private boolean copyToClipboard;
@@ -219,8 +218,6 @@ public final class CaptureActivity extends Activity implements
 		viewfinderView = (ViewfinderView) findViewById(R.id.viewfinder_view);
 		viewfinderView.setCameraManager(cameraManager);
 
-		resultView = findViewById(R.id.result_view);
-
 		handler = null;
 		lastResult = null;
 
@@ -245,29 +242,13 @@ public final class CaptureActivity extends Activity implements
 
 		inactivityTimer.onResume();
 
-		// Intent intent = getIntent();
-
-		SharedPreferences prefs = PreferenceManager
-				.getDefaultSharedPreferences(this);
-		// copyToClipboard =
-		// prefs.getBoolean(PreferencesActivity.KEY_COPY_TO_CLIPBOARD, true)
-		// && (intent == null ||
-		// intent.getBooleanExtra(Intents.Scan.SAVE_HISTORY, true));
-
 		source = IntentSource.NONE;
 		decodeFormats = null;
 		characterSet = null;
 
-		// if (intent != null) {
-		//
-		// String action = intent.getAction();
-		// String dataString = intent.getDataString();
-		//
-		// if (Intents.Scan.ACTION.equals(action)) {
-
-		// Scan the formats the intent requested, and return the result to the
-		// calling activity.
 		source = IntentSource.NATIVE_APP_INTENT;
+
+		// Set Decode format for Scanner
 		// decodeFormats = DecodeFormatManager.parseDecodeFormats(intent);
 		decodeFormats = EnumSet.of(BarcodeFormat.QR_CODE, BarcodeFormat.UPC_E,
 				BarcodeFormat.EAN_13, BarcodeFormat.EAN_8,
@@ -275,51 +256,6 @@ public final class CaptureActivity extends Activity implements
 				BarcodeFormat.CODE_39, BarcodeFormat.CODE_93,
 				BarcodeFormat.CODE_128, BarcodeFormat.ITF,
 				BarcodeFormat.CODABAR);
-		// decodeHints = DecodeHintManager.parseDecodeHints(intent);
-		//
-		// if (intent.hasExtra(Intents.Scan.WIDTH) &&
-		// intent.hasExtra(Intents.Scan.HEIGHT)) {
-		// int width = intent.getIntExtra(Intents.Scan.WIDTH, 0);
-		// int height = intent.getIntExtra(Intents.Scan.HEIGHT, 0);
-		// if (width > 0 && height > 0) {
-		// cameraManager.setManualFramingRect(width, height);
-		// }
-		// }
-		//
-		// String customPromptMessage =
-		// intent.getStringExtra(Intents.Scan.PROMPT_MESSAGE);
-		// if (customPromptMessage != null) {
-		// statusView.setText(customPromptMessage);
-		// }
-		//
-		// } else if (dataString != null &&
-		// dataString.contains(PRODUCT_SEARCH_URL_PREFIX) &&
-		// dataString.contains(PRODUCT_SEARCH_URL_SUFFIX)) {
-
-		// Scan only products and send the result to mobile Product Search.
-		// source = IntentSource.PRODUCT_SEARCH_LINK;
-		// sourceUrl = dataString;
-		// decodeFormats = DecodeFormatManager.PRODUCT_FORMATS;
-		//
-		// } else if (isZXingURL(dataString)) {
-
-		// Scan formats requested in query string (all formats if none
-		// specified).
-		// If a return URL is specified, send the results there. Otherwise,
-		// handle it ourselves.
-		// source = IntentSource.ZXING_LINK;
-		// sourceUrl = dataString;
-		// Uri inputUri = Uri.parse(dataString);
-		// scanFromWebPageManager = new ScanFromWebPageManager(inputUri);
-		// decodeFormats = DecodeFormatManager.parseDecodeFormats(inputUri);
-		// // Allow a sub-set of the hints to be specified by the caller.
-		// decodeHints = DecodeHintManager.parseDecodeHints(inputUri);
-		//
-		// }
-		//
-		// characterSet = intent.getStringExtra(Intents.Scan.CHARACTER_SET);
-		//
-		// }
 	}
 
 	private static boolean isZXingURL(String dataString) {
@@ -446,36 +382,38 @@ public final class CaptureActivity extends Activity implements
 	@Override
 	public void surfaceChanged(SurfaceHolder holder, int format, int width,
 			int height) {
-//		if (this.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
-//			cameraManager.setDisplayOrientation(90);
-//		}
-//		if (this.getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
-//			// Change orientation when rotating camera
-//			int angle;// This is camera orientation
-//			Display display = this.getWindowManager().getDefaultDisplay();
-//			switch (display.getRotation()) {// This is display orientation
-//			case Surface.ROTATION_0:
-//				// for Tablet
-//				angle = 0;
-//				break;
-//			case Surface.ROTATION_90:
-//				// for Phone
-//				angle = 0;
-//				break;
-//			case Surface.ROTATION_180:
-//				// for Tablet
-//				angle = 180;
-//				break;
-//			case Surface.ROTATION_270:
-//				// for Phone
-//				angle = 180;
-//				break;
-//			default:
-//				angle = 90;
-//				break;
-//			}
-//			cameraManager.setDisplayOrientation(angle);
-//		}
+		// if (this.getResources().getConfiguration().orientation ==
+		// Configuration.ORIENTATION_PORTRAIT) {
+		// cameraManager.setDisplayOrientation(90);
+		// }
+		// if (this.getResources().getConfiguration().orientation ==
+		// Configuration.ORIENTATION_LANDSCAPE) {
+		// // Change orientation when rotating camera
+		// int angle;// This is camera orientation
+		// Display display = this.getWindowManager().getDefaultDisplay();
+		// switch (display.getRotation()) {// This is display orientation
+		// case Surface.ROTATION_0:
+		// // for Tablet
+		// angle = 0;
+		// break;
+		// case Surface.ROTATION_90:
+		// // for Phone
+		// angle = 0;
+		// break;
+		// case Surface.ROTATION_180:
+		// // for Tablet
+		// angle = 180;
+		// break;
+		// case Surface.ROTATION_270:
+		// // for Phone
+		// angle = 180;
+		// break;
+		// default:
+		// angle = 90;
+		// break;
+		// }
+		// cameraManager.setDisplayOrientation(angle);
+		// }
 
 	}
 
@@ -501,7 +439,7 @@ public final class CaptureActivity extends Activity implements
 			historyManager.addHistoryItem(rawResult, resultHandler);
 			// Then not from history, so beep/vibrate and we have an image to
 			// draw on
-			beepManager.playBeepSoundAndVibrate();
+			// beepManager.playBeepSoundAndVibrate();
 			// drawResultPoints(barcode, scaleFactor, rawResult);
 		}
 
@@ -589,7 +527,6 @@ public final class CaptureActivity extends Activity implements
 	private void handleDecodeInternally(Result rawResult,
 			ResultHandler resultHandler, Bitmap barcode) {
 		viewfinderView.setVisibility(View.GONE);
-		resultView.setVisibility(View.VISIBLE);
 
 		ImageView barcodeImageView = (ImageView) findViewById(R.id.barcode_image_view);
 		if (barcode == null) {
@@ -752,71 +689,6 @@ public final class CaptureActivity extends Activity implements
 			}
 			// Start Preview
 			cameraManager.startPreview();
-
-			// intent.putExtra(Intents.Scan.RESULT_FORMAT, rawResult
-			// .getBarcodeFormat().toString());
-			// byte[] rawBytes = rawResult.getRawBytes();
-			// if (rawBytes != null && rawBytes.length > 0) {
-			// intent.putExtra(Intents.Scan.RESULT_BYTES, rawBytes);
-			// }
-			// Map<ResultMetadataType, ?> metadata =
-			// rawResult.getResultMetadata();
-			// if (metadata != null) {
-			// if (metadata.containsKey(ResultMetadataType.UPC_EAN_EXTENSION)) {
-			// intent.putExtra(Intents.Scan.RESULT_UPC_EAN_EXTENSION,
-			// metadata.get(ResultMetadataType.UPC_EAN_EXTENSION)
-			// .toString());
-			// }
-			// Integer orientation = (Integer) metadata
-			// .get(ResultMetadataType.ORIENTATION);
-			// if (orientation != null) {
-			// intent.putExtra(Intents.Scan.RESULT_ORIENTATION,
-			// orientation.intValue());
-			// }
-			// String ecLevel = (String) metadata
-			// .get(ResultMetadataType.ERROR_CORRECTION_LEVEL);
-			// if (ecLevel != null) {
-			// intent.putExtra(Intents.Scan.RESULT_ERROR_CORRECTION_LEVEL,
-			// ecLevel);
-			// }
-			// Iterable<byte[]> byteSegments = (Iterable<byte[]>) metadata
-			// .get(ResultMetadataType.BYTE_SEGMENTS);
-			// if (byteSegments != null) {
-			// int i = 0;
-			// for (byte[] byteSegment : byteSegments) {
-			// intent.putExtra(
-			// Intents.Scan.RESULT_BYTE_SEGMENTS_PREFIX + i,
-			// byteSegment);
-			// i++;
-			// }
-			// }
-			// }
-
-			// sendReplyMessage(R.id.return_scan_result, intent,
-			// resultDurationMS);
-
-			// } else if (source == IntentSource.PRODUCT_SEARCH_LINK) {
-			//
-			// // Reformulate the URL which triggered us into a query, so that
-			// the
-			// // request goes to the same
-			// // TLD as the scan URL.
-			// int end = sourceUrl.lastIndexOf("/scan");
-			// String replyURL = sourceUrl.substring(0, end) + "?q="
-			// + resultHandler.getDisplayContents() + "&source=zxing";
-			// sendReplyMessage(R.id.launch_product_query, replyURL,
-			// resultDurationMS);
-			//
-			// } else if (source == IntentSource.ZXING_LINK) {
-			//
-			// if (scanFromWebPageManager != null
-			// && scanFromWebPageManager.isScanFromWebPage()) {
-			// String replyURL = scanFromWebPageManager.buildReplyURL(
-			// rawResult, resultHandler);
-			// sendReplyMessage(R.id.launch_product_query, replyURL,
-			// resultDurationMS);
-			// }
-			//
 		}
 	}
 
@@ -866,7 +738,6 @@ public final class CaptureActivity extends Activity implements
 	}
 
 	private void resetStatusView() {
-		resultView.setVisibility(View.GONE);
 		viewfinderView.setVisibility(View.VISIBLE);
 		lastResult = null;
 	}
